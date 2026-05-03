@@ -1,0 +1,56 @@
+/* ── Stats row ──────────────────────────────────── */
+.stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:14px }
+.stat-card  { background:var(--white); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); border-left:4px solid transparent; transition:transform .18s,box-shadow .18s }
+.stat-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-lg) }
+.stat-card.cs { border-color:var(--sky) }
+.stat-card.cy { border-color:var(--yellow) }
+.stat-card.cg { border-color:var(--graphite) }
+.slbl { font-size:10px; font-weight:700; color:var(--graphite); text-transform:uppercase; letter-spacing:.6px; margin-bottom:8px }
+.sval { font-size:26px; font-weight:800; line-height:1 }
+.ssub { font-size:11px; color:var(--graphite); margin-top:4px }
+
+/* ── Meta / Google summary grid ─────────────────── */
+.meta-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px }
+.ms-card { background:var(--paper); border-radius:var(--radius); padding:12px; text-align:center }
+.ms-val  { font-size:20px; font-weight:800; color:var(--sky) }
+.ms-lbl  { font-size:10px; color:var(--graphite); margin-top:2px; text-transform:uppercase; letter-spacing:.4px }
+.meta-note { font-size:11px; color:var(--graphite); margin-top:8px; line-height:1.5 }
+
+/* ── Upload zone ─────────────────────────────────── */
+.meta-upload-zone { padding:20px 22px; display:flex; flex-direction:column; gap:14px }
+.upload-drop { border:2px dashed #c8d4da; border-radius:var(--radius); padding:28px 20px; text-align:center; cursor:pointer; transition:border-color .2s,background .2s }
+.upload-drop:hover,.upload-drop.drag { border-color:var(--sky); background:var(--sky-light) }
+.upload-drop svg { margin:0 auto 10px; color:var(--graphite) }
+.upload-drop p   { font-size:13px; color:var(--graphite) }
+.upload-drop span { font-size:12px; color:var(--sky); font-weight:600 }
+
+/* ── Campaign table ─────────────────────────────── */
+.meta-table-wrap { overflow-x:auto }
+.meta-table { width:100%; border-collapse:collapse; font-size:12px }
+.meta-table th { text-align:left; padding:8px 10px; font-size:10px; font-weight:700; color:var(--graphite); text-transform:uppercase; letter-spacing:.5px; border-bottom:1.5px solid var(--paper); white-space:nowrap }
+.meta-table td { padding:9px 10px; border-bottom:1px solid var(--paper); color:var(--ink-soft); white-space:nowrap }
+.meta-table tr:hover td { background:var(--paper) }
+.meta-chip { display:inline-flex; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:700 }
+.meta-chip.active { background:#dcfce7; color:#15803d }
+.meta-chip.paused { background:#fef3c7; color:#92400e }
+.meta-chip.other  { background:var(--paper-dk); color:var(--graphite) }
+
+/* ── Kommo panel ─────────────────────────────────── */
+.kommo-status { display:flex; align-items:center; gap:6px; font-size:11px; font-weight:600; padding:6px 12px; border-radius:20px; width:fit-content }
+.kommo-status.ok      { background:#dcfce7; color:#15803d }
+.kommo-status.err     { background:#fee2e2; color:#b91c1c }
+.kommo-status.loading { background:var(--sky-light); color:var(--sky) }
+.pipeline-lead { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--paper); border-radius:var(--radius); font-size:13px; transition:background .15s }
+.pipeline-lead:hover { background:var(--sky-light) }
+.pl-name  { flex:1; font-weight:600; color:var(--ink) }
+.pl-stage { font-size:11px; color:var(--graphite); background:var(--white); padding:3px 8px; border-radius:20px; border:1px solid #e2e7ea }
+.pl-price { font-size:12px; font-weight:700; color:var(--sky) }
+
+/* ── New post btn row ────────────────────────────── */
+.wall-actions { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px }
+.wall-title   { font-size:14px; font-weight:700; color:var(--ink) }
+
+@media(max-width:600px) {
+  .stats-row { grid-template-columns:1fr }
+  .meta-summary { grid-template-columns:repeat(2,1fr) }
+}

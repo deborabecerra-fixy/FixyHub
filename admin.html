@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Fixy Hub · Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/styles.css"/>
+<link rel="stylesheet" href="css/admin.css"/>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="hlogo">
+    <img src="assets/logo-fixy.svg" alt="Fixy" width="118" height="30"
+         onerror="this.outerHTML='<span style=\'font-size:20px;font-weight:800;color:#008FC3\'>fixy</span>'"/>
+    <div class="hlogo-div"></div>
+    <span class="hub-tag">Hub</span>
+    <span class="admin-page-title">Panel de Administración</span>
+  </div>
+  <div class="hright">
+    <button class="btn-back" onclick="window.location.href='index.html'">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
+      Volver al Hub
+    </button>
+    <button class="btn-logout" id="btn-logout">Salir</button>
+    <div class="avatar-btn">
+      <span id="av-init">?</span>
+      <span class="admin-crown">👑</span>
+    </div>
+  </div>
+</header>
+
+<div class="admin-layout">
+
+  <!-- NAV -->
+  <nav class="admin-nav">
+    <button class="admin-nav-btn active" data-tab="users" onclick="Admin.switchTab('users')">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+      Usuarios
+    </button>
+    <button class="admin-nav-btn" data-tab="reports" onclick="Admin.switchTab('reports')">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z"/></svg>
+      Reportes
+    </button>
+    <button class="admin-nav-btn" data-tab="wall" onclick="Admin.switchTab('wall')">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+      Muro
+    </button>
+    <button class="admin-nav-btn" data-tab="social" onclick="Admin.switchTab('social')">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z"/></svg>
+      Redes
+    </button>
+    <button class="admin-nav-btn" data-tab="config" onclick="Admin.switchTab('config')">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Criterios
+    </button>
+  </nav>
+
+  <main class="admin-main">
+
+    <!-- ── TAB: USUARIOS ── -->
+    <section id="tab-users" class="admin-tab active">
+      <h2>Gestión de usuarios</h2>
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Email</th>
+            <th>Rol</th>
+            <th>Último acceso</th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody">
+          <tr><td colspan="4" class="empty-cell">Cargando…</td></tr>
+        </tbody>
+      </table>
+
+      <div class="view-as-section">
+        <div>
+          <p><strong>Modo vista de usuario</strong></p>
+          <p>Revisá cómo ve el Hub un miembro del equipo sin permisos de admin.</p>
+        </div>
+        <button id="view-as-user-btn" onclick="Admin.toggleViewAsUser()">👁️ Ver como usuario</button>
+      </div>
+    </section>
+
+    <!-- ── TAB: REPORTES ── -->
+    <section id="tab-reports" class="admin-tab">
+      <h2>Carga de reportes</h2>
+      <p style="font-size:13px;color:var(--graphite);margin-bottom:20px;line-height:1.6">
+        Subí los exports CSV de cada plataforma. Los datos se procesan en el navegador y quedan disponibles en el dashboard.
+      </p>
+      <div class="reports-list" id="reports-list">
+        <div class="dash-empty">Cargando…</div>
+      </div>
+    </section>
+
+    <!-- ── TAB: MURO ── -->
+    <section id="tab-wall" class="admin-tab">
+      <div class="admin-wall-header">
+        <h2 style="margin-bottom:0">Muro interno</h2>
+        <button class="btn-sm" onclick="AdminWall.openNew()">+ Nueva publicación</button>
+      </div>
+      <div class="admin-wall-list" id="admin-wall-list">
+        <div class="dash-empty">No hay publicaciones.</div>
+      </div>
+    </section>
+
+    <!-- ── TAB: REDES ── -->
+    <section id="tab-social" class="admin-tab">
+      <h2>Redes sociales</h2>
+      <p style="font-size:13px;color:var(--graphite);margin-bottom:20px">
+        Actualizá el texto de la última publicación, el link y la fecha para cada red.
+      </p>
+      <div class="social-admin-list" id="social-admin-list">
+        <div class="dash-empty">Cargando…</div>
+      </div>
+    </section>
+
+    <!-- ── TAB: CRITERIOS ── -->
+    <section id="tab-config" class="admin-tab">
+      <h2>Criterios automáticos</h2>
+      <p style="font-size:13px;color:var(--graphite);margin-bottom:20px;line-height:1.6">
+        Estos filtros se aplican automáticamente al procesar reportes de Kommo.
+        Para modificarlos editá <code style="background:var(--paper-dk);padding:1px 6px;border-radius:4px;font-size:12px">js/config.js</code>.
+      </p>
+      <div class="config-display" id="config-display">
+        <div class="dash-empty">Cargando…</div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- MODAL: nuevo post desde admin -->
+<div class="modal-overlay" id="admin-post-modal">
+  <div class="modal-card">
+    <div class="modal-title" id="admin-post-modal-title">✏️ Nueva publicación</div>
+    <textarea class="modal-textarea" id="admin-mpt" placeholder="¿Qué querés compartir con el equipo?"></textarea>
+    <div class="modal-row">
+      <span class="modal-label" style="white-space:nowrap">Imagen (URL):</span>
+      <input class="modal-input" id="admin-mpi" type="text" placeholder="https://…"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="AdminWall.closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="AdminWall.save()">Publicar</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCRIPTS -->
+<script src="js/config.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/permissions.js"></script>
+<script src="data/mockData.js"></script>
+<script src="js/metaParser.js"></script>
+<script src="js/googleAdsParser.js"></script>
+<script src="js/kommoParser.js"></script>
+<script src="js/analytics.js"></script>
+<script src="js/admin.js"></script>
+<script>
+  // ── Admin wall helper (thin wrapper) ───────────────
+  const AdminWall = {
+    _editId: null,
+    openNew() {
+      this._editId = null;
+      document.getElementById('admin-post-modal-title').textContent = '✏️ Nueva publicación';
+      document.getElementById('admin-mpt').value = '';
+      document.getElementById('admin-mpi').value = '';
+      document.getElementById('admin-post-modal').classList.add('open');
+    },
+    closeModal() {
+      document.getElementById('admin-post-modal').classList.remove('open');
+    },
+    save() {
+      const text = document.getElementById('admin-mpt').value.trim();
+      const img  = document.getElementById('admin-mpi').value.trim();
+      if (!text) return;
+      const user = Auth.getCurrentUser();
+      const posts = Storage.getWallPosts();
+      posts.push({
+        id: 'post_' + Date.now(), text, img,
+        authorEmail: user.email, authorName: user.name, authorInitials: user.initials,
+        isAdmin: true, timestamp: new Date().toISOString(),
+        pinned: false, reactions: {}, comments: []
+      });
+      Storage.saveWallPosts(posts);
+      Storage.addActivity({ text: user.name + ' publicó en el muro', time: 'Ahora', dot: 'y' });
+      this.closeModal();
+      Admin.renderTab('wall');
+    }
+  };
+
+  // ── Init ───────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    const user = Auth.requireAdmin();
+    if (!user) return;
+
+    document.getElementById('av-init').textContent = user.initials;
+    document.getElementById('btn-logout').addEventListener('click', () => Auth.logout());
+
+    Admin.init(user);
+
+    // Close modals on overlay click
+    document.querySelectorAll('.modal-overlay').forEach(el => {
+      el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+    });
+  });
+</script>
+</body>
+</html>

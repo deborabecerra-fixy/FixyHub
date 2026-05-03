@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Flux · Fixy Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/styles.css"/>
+<link rel="stylesheet" href="css/chat.css"/>
+</head>
+<body>
+
+<div class="chat-page" id="chat-page">
+
+  <!-- HEADER -->
+  <header class="chat-header">
+    <div class="chat-header-logo">
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="color:var(--yellow)"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+      Flux · Asistente de Marketing
+    </div>
+    <span class="chat-header-sub">Fixy Logística · Hub</span>
+    <button class="btn-back-chat" onclick="window.location.href='index.html'">
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
+      Volver
+    </button>
+  </header>
+
+  <!-- MESSAGES -->
+  <div class="chat-messages" id="chat-messages"></div>
+
+  <!-- QUICK CHIPS -->
+  <div class="chat-chips" id="chat-chips">
+    <button class="chat-chip" onclick="Flux.chip('¿Cómo están las campañas?')">📊 Campañas</button>
+    <button class="chat-chip" onclick="Flux.chip('¿Cuántos leads gestionables hay?')">🎯 Leads</button>
+    <button class="chat-chip" onclick="Flux.chip('¿Cuál es la mejor campaña de Meta?')">🏆 Mejor campaña</button>
+    <button class="chat-chip" onclick="Flux.chip('¿Hay campañas a revisar?')">⚠️ A revisar</button>
+    <button class="chat-chip" onclick="Flux.chip('¿Qué recomendás?')">💡 Recomendaciones</button>
+    <button class="chat-chip" onclick="Flux.chip('¿Qué podés hacer?')">❓ Ayuda</button>
+  </div>
+
+  <!-- INPUT -->
+  <div class="chat-input-bar">
+    <div class="chat-input-inner">
+      <input id="chat-input" type="text" placeholder="Preguntale algo a Flux…" autocomplete="off"/>
+      <button id="chat-send">
+        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- NO-AUTH fallback (hidden initially) -->
+<div class="chat-page" id="chat-no-auth" style="display:none">
+  <header class="chat-header">
+    <div class="chat-header-logo">Flux · Fixy Hub</div>
+  </header>
+  <div class="chat-no-auth">
+    <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="color:var(--graphite)"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+    <h2>Necesitás iniciar sesión</h2>
+    <p>Flux solo está disponible para el equipo Fixy.</p>
+    <a href="index.html" class="btn-sm" style="text-decoration:none;display:inline-block">Ir al login</a>
+  </div>
+</div>
+
+<!-- SCRIPTS -->
+<script src="js/config.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/permissions.js"></script>
+<script src="data/mockData.js"></script>
+<script src="js/analytics.js"></script>
+<script src="js/chat.js"></script>
+<script>
+  const Flux = {
+    chip(text) {
+      const inp = document.getElementById('chat-input');
+      if (inp) { inp.value = text; }
+      Chat.initFullPage._send && Chat.initFullPage._send();
+      // Manually trigger send
+      const inp2 = document.getElementById('chat-input');
+      if (!inp2) return;
+      inp2.value = text;
+      inp2.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const user = Auth.getCurrentUser();
+    if (!user) {
+      document.getElementById('chat-page').style.display = 'none';
+      document.getElementById('chat-no-auth').style.display = 'flex';
+      return;
+    }
+    Chat.initFullPage(user);
+  });
+</script>
+</body>
+</html>
