@@ -12,6 +12,10 @@ const Dashboard = (() => {
     return String(n);
   }
 
+  function safe(v) {
+    return (v === undefined || v === null) ? 0 : v;
+  }
+
   function emptyState(message) {
     return `<div class="dash-empty"><p>${message}</p></div>`;
   }
@@ -55,9 +59,9 @@ const Dashboard = (() => {
 
   // ── Stat cards ────────────────────────────────────────────────────────────
   function renderStats(meta, google, kommo) {
-    const activeCamps = meta?.summary.activeCampaigns ?? '—';
-    const manLeads    = kommo?.summary.manageableLeads ?? '—';
-    const wonLeads    = kommo?.summary.wonLeads        ?? '—';
+    const activeCamps = meta?.summary?.activeCampaigns ?? '—';
+    const manLeads    = safe(kommo?.summary?.manageableLeads);
+    const wonLeads    = safe(kommo?.summary?.wonLeads);
 
     const sc = document.getElementById('stat-camps');
     const sl = document.getElementById('stat-leads');
@@ -155,31 +159,40 @@ const Dashboard = (() => {
     }
 
     const s = report.summary;
-    if (badge) badge.textContent = '✅ ' + s.totalImported + ' leads';
+    const totalImp = safe(s.totalImported);
+    const atribImp = safe(s.marketingAttributedLeads);
+    const gestImp = safe(s.manageableLeads);
+    const noGestImp = safe(s.nonManageableLeads);
+    const wonImp = safe(s.wonLeads);
+    const lostImp = safe(s.lostLeads);
+    const activeImp = safe(s.activeLeads);
+    const qualRate = safe(s.leadQualityRate);
+
+    if (badge) badge.textContent = '✅ ' + totalImp + ' leads';
 
     // Descartados dentro de Marketing
     const discardedParts = [];
-    if (s.jobSearchLeads > 0) discardedParts.push(`${s.jobSearchLeads} búsqueda laboral`);
-    if (s.personalShippingLeads > 0) discardedParts.push(`${s.personalShippingLeads} envío particular`);
-    if (s.incompleteDataLeads > 0) discardedParts.push(`${s.incompleteDataLeads} dato incompleto`);
-    if (s.outOfServiceLeads > 0) discardedParts.push(`${s.outOfServiceLeads} fuera de servicio`);
+    if (safe(s.jobSearchLeads) > 0) discardedParts.push(`${s.jobSearchLeads} búsqueda laboral`);
+    if (safe(s.personalShippingLeads) > 0) discardedParts.push(`${s.personalShippingLeads} envío particular`);
+    if (safe(s.incompleteDataLeads) > 0) discardedParts.push(`${s.incompleteDataLeads} dato incompleto`);
+    if (safe(s.outOfServiceLeads) > 0) discardedParts.push(`${s.outOfServiceLeads} fuera de servicio`);
 
-    const qualityColor = s.leadQualityRate >= 60 ? 'var(--green)' : s.leadQualityRate >= 40 ? 'var(--yellow)' : 'var(--error)';
+    const qualityColor = qualRate >= 60 ? 'var(--green)' : qualRate >= 40 ? 'var(--yellow)' : 'var(--error)';
 
     body.innerHTML = `
       <div class="panel-inner">
         <div class="meta-summary">
-          <div class="ms-card"><div class="ms-val">${s.totalImported}</div><div class="ms-lbl">Importados</div></div>
-          <div class="ms-card"><div class="ms-val">${s.marketingAttributedLeads}</div><div class="ms-lbl">Atribuibles</div></div>
-          <div class="ms-card"><div class="ms-val" style="color:${qualityColor}">${s.manageableLeads}</div><div class="ms-lbl">Gestionables</div></div>
-          <div class="ms-card"><div class="ms-val">${s.nonManageableLeads}</div><div class="ms-lbl">No gestionables</div></div>
-          <div class="ms-card"><div class="ms-val">${s.wonLeads}</div><div class="ms-lbl">Ganados*</div></div>
-          <div class="ms-card"><div class="ms-val">${s.lostLeads}</div><div class="ms-lbl">Perdidos*</div></div>
-          <div class="ms-card"><div class="ms-val">${s.activeLeads}</div><div class="ms-lbl">En gestión*</div></div>
-          <div class="ms-card"><div class="ms-val" style="color:${qualityColor}">${s.leadQualityRate}%</div><div class="ms-lbl">Calidad del lead</div></div>
+          <div class="ms-card"><div class="ms-val">${totalImp}</div><div class="ms-lbl">Importados</div></div>
+          <div class="ms-card"><div class="ms-val">${atribImp}</div><div class="ms-lbl">Atribuibles</div></div>
+          <div class="ms-card"><div class="ms-val" style="color:${qualityColor}">${gestImp}</div><div class="ms-lbl">Gestionables</div></div>
+          <div class="ms-card"><div class="ms-val">${noGestImp}</div><div class="ms-lbl">No gestionables</div></div>
+          <div class="ms-card"><div class="ms-val">${wonImp}</div><div class="ms-lbl">Ganados*</div></div>
+          <div class="ms-card"><div class="ms-val">${lostImp}</div><div class="ms-lbl">Perdidos*</div></div>
+          <div class="ms-card"><div class="ms-val">${activeImp}</div><div class="ms-lbl">En gestión*</div></div>
+          <div class="ms-card"><div class="ms-val" style="color:${qualityColor}">${qualRate}%</div><div class="ms-lbl">Calidad del lead</div></div>
         </div>
         ${discardedParts.length ? `<div class="dash-alert">📋 Descartados dentro de Marketing: ${discardedParts.join(' · ')}</div>` : ''}
-        ${s.excludedNotMarketing > 0 ? `<div class="dash-alert">🚫 Fuera del análisis de Marketing: ${s.excludedNotMarketing}</div>` : ''}
+        ${safe(s.excludedNotMarketing) > 0 ? `<div class="dash-alert">🚫 Fuera del análisis de Marketing: ${safe(s.excludedNotMarketing)}</div>` : ''}
         <p class="meta-note">* Contexto en Kommo CRM · ${report.filename} · ${new Date(report.loadedAt).toLocaleDateString('es-AR')}</p>
       </div>`;
   }

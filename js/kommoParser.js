@@ -72,33 +72,39 @@ const KommoParser = (() => {
     if (utm || clicks || analytics) return true;
 
     // Check referrer
-    if (row[colMap.referrer]) {
+    if (row[colMap.referrer] && colMap.referrer) {
       const ref = normalizeText(row[colMap.referrer]);
       const marketingSources = ['google', 'facebook', 'instagram', 'meta', 'ads', 'fixy', 'tiktok', 'linkedin'];
       if (marketingSources.some(s => ref.includes(s))) return true;
     }
 
     // Check if any field contains marketing indicators
-    const allText = [
-      normalizeText(row[colMap.solution] || ''),
-      normalizeText(row[colMap.tags] || ''),
-      normalizeText(row[colMap.notes] || ''),
-      normalizeText(row[colMap.name] || '')
-    ].join(' ');
-    const marketingIndicators = ['facebook', 'instagram', 'google', 'meta', 'ads', 'campaña', 'campana', 'publicidad', 'marketing'];
-    if (marketingIndicators.some(ind => allText.includes(ind))) return true;
+    if (colMap.solution || colMap.tags || colMap.notes || colMap.name) {
+      const allText = [
+        colMap.solution ? normalizeText(row[colMap.solution] || '') : '',
+        colMap.tags ? normalizeText(row[colMap.tags] || '') : '',
+        colMap.notes ? normalizeText(row[colMap.notes] || '') : '',
+        colMap.name ? normalizeText(row[colMap.name] || '') : ''
+      ].join(' ');
+      const marketingIndicators = ['facebook', 'instagram', 'google', 'meta', 'ads', 'campana', 'campaña', 'publicidad', 'marketing'];
+      if (marketingIndicators.some(ind => allText.includes(ind))) return true;
+    }
 
     // Check allowed phones
-    const allowedPhones = FIXY_CONFIG.allowedPhones
-      .filter(p => !p.startsWith('COMPLETAR'))
-      .map(p => normalizePhone(p));
-    const phonesCombined = [
-      normalizePhone(row[colMap.phone] || ''),
-      normalizePhone(row[colMap.phone2] || ''),
-      normalizePhone(row[colMap.phone3] || ''),
-      normalizePhone(row[colMap.phone4] || '')
-    ].join('');
-    if (phonesCombined && allowedPhones.some(p => p && phonesCombined.includes(p))) return true;
+    if (colMap.phone || colMap.phone2 || colMap.phone3 || colMap.phone4) {
+      const allowedPhones = (FIXY_CONFIG?.allowedPhones || [])
+        .filter(p => !p.startsWith('COMPLETAR'))
+        .map(p => normalizePhone(p));
+      
+      const phonesCombined = [
+        colMap.phone ? normalizePhone(row[colMap.phone] || '') : '',
+        colMap.phone2 ? normalizePhone(row[colMap.phone2] || '') : '',
+        colMap.phone3 ? normalizePhone(row[colMap.phone3] || '') : '',
+        colMap.phone4 ? normalizePhone(row[colMap.phone4] || '') : ''
+      ].join('');
+      
+      if (phonesCombined && allowedPhones.length > 0 && allowedPhones.some(p => p && phonesCombined.includes(p))) return true;
+    }
 
     return false;
   }
@@ -270,6 +276,21 @@ const KommoParser = (() => {
         ? Math.round((counts.won / counts.manageable) * 100)
         : 0;
 
+      // Debug logging
+      if (DEBUG_KOMMO || true) {
+        console.log('=== KOMMO PARSER SUMMARY ===');
+        console.log('Total importados:', counts.total);
+        console.log('Atribuibles a Marketing:', counts.marketingAttributed);
+        console.log('Excluidos (no marketing):', counts.excludedNotMarketing);
+        console.log('Gestionables:', counts.manageable);
+        console.log('No gestionables:', counts.nonManageable);
+        console.log('Ganados:', counts.won);
+        console.log('Perdidos:', counts.lost);
+        console.log('En gestión:', counts.active);
+        console.log('Calidad del lead:', leadQualityRate + '%');
+        console.log('============================');
+      }
+
       return {
         source: 'kommo',
         filename: filename || 'reporte-kommo.csv',
@@ -279,24 +300,24 @@ const KommoParser = (() => {
         rows: classified,
         summary: {
           totalImported: counts.total,
-          marketingAttributedLeads: counts.marketingAttributed,
-          excludedNotMarketing: counts.excludedNotMarketing,
-          manageableLeads: counts.manageable,
-          nonManageableLeads: counts.nonManageable,
-          wonLeads: counts.won,
-          lostLeads: counts.lost,
-          activeLeads: counts.active,
-          incompleteDataLeads: counts.incomplete,
-          jobSearchLeads: counts.jobSearch,
-          personalShippingLeads: counts.personalShipping,
-          outOfServiceLeads: counts.outOfService,
-          leadQualityRate,
-          conversionRateOverManageable: conversionRate,
-          byService: counts.byService,
-          byMonthlyShipments: counts.byShipments,
-          bySource: counts.bySource,
-          byStatus: counts.byStatus,
-          lossReasons: counts.lossReasons
+          marketingAttributedLeads: counts.marketingAttributed || 0,
+          excludedNotMarketing: counts.excludedNotMarketing || 0,
+          manageableLeads: counts.manageable || 0,
+          nonManageableLeads: counts.nonManageable || 0,
+          wonLeads: counts.won || 0,
+          lostLeads: counts.lost || 0,
+          activeLeads: counts.active || 0,
+          incompleteDataLeads: counts.incomplete || 0,
+          jobSearchLeads: counts.jobSearch || 0,
+          personalShippingLeads: counts.personalShipping || 0,
+          outOfServiceLeads: counts.outOfService || 0,
+          leadQualityRate: leadQualityRate || 0,
+          conversionRateOverManageable: conversionRate || 0,
+          byService: counts.byService || {},
+          byMonthlyShipments: counts.byShipments || {},
+          bySource: counts.bySource || {},
+          byStatus: counts.byStatus || {},
+          lossReasons: counts.lossReasons || {}
         }
       };
     }
