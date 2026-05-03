@@ -150,7 +150,10 @@
 </div>
 
 <!-- SCRIPTS -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="js/config.js"></script>
+<script src="js/firebaseConfig.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/permissions.js"></script>
@@ -161,7 +164,7 @@
 <script src="js/analytics.js"></script>
 <script src="js/admin.js"></script>
 <script>
-  // ── Admin wall helper (thin wrapper) ───────────────
+  // ── Admin wall helper (thin wrapper) ──────────────────────────────────────
   const AdminWall = {
     _editId: null,
     openNew() {
@@ -178,7 +181,7 @@
       const text = document.getElementById('admin-mpt').value.trim();
       const img  = document.getElementById('admin-mpi').value.trim();
       if (!text) return;
-      const user = Auth.getCurrentUser();
+      const user  = Auth.getCurrentUser();
       const posts = Storage.getWallPosts();
       posts.push({
         id: 'post_' + Date.now(), text, img,
@@ -193,19 +196,22 @@
     }
   };
 
-  // ── Init ───────────────────────────────────────────
+  // ── Init — async to handle Firebase auth state ────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
-    const user = Auth.requireAdmin();
-    if (!user) return;
+    Auth.listenAuthState(({ authenticated, user }) => {
+      if (!authenticated || !user || !user.isAdmin) {
+        window.location.href = 'index.html';
+        return;
+      }
 
-    document.getElementById('av-init').textContent = user.initials;
-    document.getElementById('btn-logout').addEventListener('click', () => Auth.logout());
+      document.getElementById('av-init').textContent = user.initials;
+      document.getElementById('btn-logout').addEventListener('click', () => Auth.logout());
 
-    Admin.init(user);
+      Admin.init(user);
 
-    // Close modals on overlay click
-    document.querySelectorAll('.modal-overlay').forEach(el => {
-      el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+      document.querySelectorAll('.modal-overlay').forEach(el => {
+        el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+      });
     });
   });
 </script>

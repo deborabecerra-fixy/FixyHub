@@ -2,7 +2,7 @@ const Dashboard = (() => {
   function fmtCurrency(n) {
     if (!n) return '$0';
     if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
-    if (n >= 1000) return '$' + Math.round(n / 1000) + 'K';
+    if (n >= 1000)    return '$' + Math.round(n / 1000) + 'K';
     return '$' + n.toLocaleString('es-AR');
   }
 
@@ -16,17 +16,48 @@ const Dashboard = (() => {
     return `<div class="dash-empty"><p>${message}</p></div>`;
   }
 
-  function renderStats(meta, google, kommo) {
-    const activeCamps  = meta?.summary.activeCampaigns   ?? '—';
-    const manLeads     = kommo?.summary.manageableLeads   ?? '—';
-    const wonLeads     = kommo?.summary.wonLeads          ?? '—';
-    const totalSpent   = meta?.summary.totalSpent
-      ? fmtCurrency(meta.summary.totalSpent)
-      : (google?.summary.totalSpend ? fmtCurrency(google.summary.totalSpend) : '—');
+  // ── Consolidate multiple Meta CSV reports into one ────────────────────────
+  function consolidateMetaReports(reports) {
+    if (!reports || !reports.length) return null;
+    if (reports.length === 1) return reports[0];
 
-    document.getElementById('stat-camps')?.setAttribute('data-val', activeCamps);
-    document.getElementById('stat-leads')?.setAttribute('data-val', manLeads);
-    document.getElementById('stat-won')?.setAttribute('data-val', wonLeads);
+    const summaries = reports.map(r => r.summary);
+    const totalSpent         = summaries.reduce((s, r) => s + (r.totalSpent         || 0), 0);
+    const totalResults       = summaries.reduce((s, r) => s + (r.totalResults       || 0), 0);
+    const totalImpressions   = summaries.reduce((s, r) => s + (r.totalImpressions   || 0), 0);
+    const totalReach         = summaries.reduce((s, r) => s + (r.totalReach         || 0), 0);
+    const totalCampaigns     = summaries.reduce((s, r) => s + (r.totalCampaigns     || 0), 0);
+    const activeCampaigns    = summaries.reduce((s, r) => s + (r.activeCampaigns    || 0), 0);
+    const campaignsToReview  = summaries.flatMap(r => r.campaignsToReview || []);
+    const averageCostPerResult = totalResults > 0 ? Math.round(totalSpent / totalResults) : 0;
+
+    // Best campaign: lowest cost-per-result across all files
+    let bestCampaign      = null;
+    let bestCostPerResult = Infinity;
+    for (const s of summaries) {
+      if (s.bestCampaign && s.averageCostPerResult > 0 && s.averageCostPerResult < bestCostPerResult) {
+        bestCampaign      = s.bestCampaign;
+        bestCostPerResult = s.averageCostPerResult;
+      }
+    }
+
+    return {
+      filename: reports.length + ' archivos consolidados',
+      rowCount: reports.reduce((s, r) => s + (r.rowCount || 0), 0),
+      loadedAt: reports[reports.length - 1].loadedAt,
+      summary: {
+        totalSpent, totalResults, totalImpressions, totalReach,
+        totalCampaigns, activeCampaigns, campaignsToReview,
+        averageCostPerResult, bestCampaign
+      }
+    };
+  }
+
+  // ── Stat cards ────────────────────────────────────────────────────────────
+  function renderStats(meta, google, kommo) {
+    const activeCamps = meta?.summary.activeCampaigns ?? '—';
+    const manLeads    = kommo?.summary.manageableLeads ?? '—';
+    const wonLeads    = kommo?.summary.wonLeads        ?? '—';
 
     const sc = document.getElementById('stat-camps');
     const sl = document.getElementById('stat-leads');
@@ -36,25 +67,30 @@ const Dashboard = (() => {
     if (sw) sw.textContent = wonLeads;
   }
 
+  // ── Meta Ads panel ────────────────────────────────────────────────────────
   function renderMetaPanel(report) {
-    const body   = document.getElementById('meta-body');
-    const badge  = document.getElementById('meta-badge');
+    const body  = document.getElementById('meta-body');
+    const badge = document.getElementById('meta-badge');
     if (!body) return;
 
     if (!report) {
-      badge && (badge.textContent = 'Sin datos');
+      if (badge) badge.textContent = 'Sin datos';
       body.innerHTML = emptyState(
-        'Todavía no hay reporte de Meta Ads cargado. Cuando Marketing suba el archivo CSV, acá vas a ver el resumen de campañas.'
+        'Todavía no hay reporte de Meta Ads cargado. Cuando subas el CSV desde Admin, acá vas a ver el resumen de campañas.'
       );
       return;
     }
 
     const s = report.summary;
-    badge && (badge.textContent = '✅ ' + s.totalCampaigns + ' campañas');
+    if (badge) badge.textContent = '✅ ' + s.totalCampaigns + ' campañas';
 
     const reviewHTML = s.campaignsToReview.length
-      ? `<div class="dash-alert">⚠️ ${s.campaignsToReview.length} campaña(s) con gasto sin resultados: ${s.campaignsToReview.slice(0,3).join(', ')}${s.campaignsToReview.length > 3 ? '…' : ''}</div>`
+      ? `<div class="dash-alert">⚠️ ${s.campaignsToReview.length} campaña(s) con gasto sin resultados: ${s.campaignsToReview.slice(0, 3).join(', ')}${s.campaignsToReview.length > 3 ? '…' : ''}</div>`
       : '';
+
+    const filesNote = report.filename?.includes('archivos')
+      ? `<p class="meta-note">📊 ${report.filename} · ${report.rowCount} filas</p>`
+      : `<p class="meta-note">Reporte: ${report.filename} · ${report.rowCount} filas · ${new Date(report.loadedAt).toLocaleDateString('es-AR')}</p>`;
 
     body.innerHTML = `
       <div class="panel-inner">
@@ -68,25 +104,24 @@ const Dashboard = (() => {
         </div>
         ${reviewHTML}
         ${s.bestCampaign ? `<p class="meta-note">🏆 Mejor campaña: <strong>${s.bestCampaign}</strong></p>` : ''}
-        <p class="meta-note">Reporte: ${report.filename} · ${report.rowCount} filas · ${new Date(report.loadedAt).toLocaleDateString('es-AR')}</p>
+        ${filesNote}
       </div>`;
   }
 
+  // ── Google Ads panel ──────────────────────────────────────────────────────
   function renderGooglePanel(report) {
     const body  = document.getElementById('google-body');
     const badge = document.getElementById('google-badge');
     if (!body) return;
 
     if (!report) {
-      badge && (badge.textContent = 'Sin datos');
-      body.innerHTML = emptyState(
-        'Todavía no hay reporte de Google Ads cargado. Subí el CSV desde Admin para ver el resumen.'
-      );
+      if (badge) badge.textContent = 'Sin datos';
+      body.innerHTML = emptyState('Todavía no hay reporte de Google Ads. Subí el CSV desde Admin para ver el resumen.');
       return;
     }
 
     const s = report.summary;
-    badge && (badge.textContent = '✅ ' + s.activeCampaigns + ' campañas');
+    if (badge) badge.textContent = '✅ ' + s.activeCampaigns + ' campañas';
 
     const problemHTML = s.problematicTerms.length
       ? `<div class="dash-alert">⚠️ ${s.problematicTerms.length} término(s) no comerciales detectados.</div>`
@@ -107,27 +142,26 @@ const Dashboard = (() => {
       </div>`;
   }
 
+  // ── Kommo panel ───────────────────────────────────────────────────────────
   function renderKommoPanel(report) {
     const body  = document.getElementById('kommo-body');
     const badge = document.getElementById('kommo-badge');
     if (!body) return;
 
     if (!report) {
-      badge && (badge.textContent = 'Sin datos');
-      body.innerHTML = emptyState(
-        'Todavía no hay reporte de Kommo cargado. Subí el CSV desde Admin para ver el análisis de leads.'
-      );
+      if (badge) badge.textContent = 'Sin datos';
+      body.innerHTML = emptyState('Todavía no hay reporte de Kommo. Subí el CSV desde Admin para ver el análisis de leads.');
       return;
     }
 
     const s = report.summary;
-    badge && (badge.textContent = '✅ ' + s.totalImported + ' leads');
+    if (badge) badge.textContent = '✅ ' + s.totalImported + ' leads';
 
     const excludedParts = [];
-    if (s.jobSearchLeads      > 0) excludedParts.push(`${s.jobSearchLeads} búsqueda laboral`);
+    if (s.jobSearchLeads       > 0) excludedParts.push(`${s.jobSearchLeads} búsqueda laboral`);
     if (s.personalShippingLeads > 0) excludedParts.push(`${s.personalShippingLeads} envío personal`);
-    if (s.outOfSourceLeads    > 0) excludedParts.push(`${s.outOfSourceLeads} fuera de fuente`);
-    if (s.incompleteDataLeads > 0) excludedParts.push(`${s.incompleteDataLeads} dato incompleto`);
+    if (s.outOfSourceLeads     > 0) excludedParts.push(`${s.outOfSourceLeads} fuera de fuente`);
+    if (s.incompleteDataLeads  > 0) excludedParts.push(`${s.incompleteDataLeads} dato incompleto`);
 
     const rateColor = s.manageableRate >= 60 ? 'var(--green)' : s.manageableRate >= 40 ? 'var(--yellow)' : 'var(--error)';
 
@@ -141,13 +175,12 @@ const Dashboard = (() => {
           <div class="ms-card"><div class="ms-val">${s.activeLeads}</div><div class="ms-lbl">En gestión</div></div>
           <div class="ms-card"><div class="ms-val">${s.conversionRateOverManageable}%</div><div class="ms-lbl">Conversión</div></div>
         </div>
-        ${excludedParts.length
-          ? `<div class="dash-alert">📋 Descartados: ${excludedParts.join(' · ')}</div>`
-          : ''}
-        <p class="meta-note">Tasa gestionable: <strong>${s.manageableRate}%</strong> · Reporte: ${report.filename} · ${new Date(report.loadedAt).toLocaleDateString('es-AR')}</p>
+        ${excludedParts.length ? `<div class="dash-alert">📋 Descartados: ${excludedParts.join(' · ')}</div>` : ''}
+        <p class="meta-note">Tasa gestionable: <strong>${s.manageableRate}%</strong> · ${report.filename} · ${new Date(report.loadedAt).toLocaleDateString('es-AR')}</p>
       </div>`;
   }
 
+  // ── Insights panel ────────────────────────────────────────────────────────
   function renderInsights(insights) {
     const el = document.getElementById('insights-body');
     if (!el || !insights) return;
@@ -167,6 +200,7 @@ const Dashboard = (() => {
       ${insights.leadQualityComment ? `<div class="insight-leads">${insights.leadQualityComment}</div>` : ''}`;
   }
 
+  // ── Activity log ──────────────────────────────────────────────────────────
   function renderActivity() {
     const list = document.getElementById('act-list');
     if (!list) return;
@@ -182,19 +216,21 @@ const Dashboard = (() => {
 
   return {
     init(user) {
-      const meta   = Storage.getReport('meta');
-      const google = Storage.getReport('google');
-      const kommo  = Storage.getReport('kommo');
+      const metaReports = Storage.getReports('meta');
+      const meta        = consolidateMetaReports(metaReports);
+      const google      = Storage.getReport('google');
+      const kommo       = Storage.getReport('kommo');
 
       renderStats(meta, google, kommo);
       renderMetaPanel(meta);
       renderGooglePanel(google);
       renderKommoPanel(kommo);
 
-      const metaS   = meta?.summary   || null;
-      const googleS = google?.summary || null;
-      const kommoS  = kommo?.summary  || null;
-      const insights = Analytics.generateMarketingInsights(metaS, googleS, kommoS);
+      const insights = Analytics.generateMarketingInsights(
+        meta?.summary   || null,
+        google?.summary || null,
+        kommo?.summary  || null
+      );
       renderInsights(insights);
       renderActivity();
     },

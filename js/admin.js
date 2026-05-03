@@ -1,60 +1,85 @@
 const Admin = (() => {
-  let _user = null;
+  let _user      = null;
   let _activeTab = 'users';
 
-  // ── Users tab ────────────────────────────────────
+  // ── Users tab ────────────────────────────────────────────────────────────────
   function renderUsersTab() {
     const container = document.getElementById('tab-users');
     if (!container) return;
-    const users = Storage.getUsers();
+    const users  = Storage.getUsers();
+    const viewAs = Storage.getAdminViewAs();
 
     const rows = users.map(u => {
-      const isFixed = Auth.isAdmin(u.email);
-      const roleOptions = isFixed
+      const isFixed    = Auth.isAdmin(u.email);
+      const roleSelect = isFixed
         ? `<span class="role-badge admin">Admin</span>`
         : `<select class="role-select" onchange="Admin.changeRole('${u.email}', this.value)">
-             <option value="viewer"  ${(u.role || 'viewer') === 'viewer'  ? 'selected' : ''}>Viewer</option>
-             <option value="editor"  ${(u.role || 'viewer') === 'editor'  ? 'selected' : ''}>Editor</option>
+             <option value="viewer" ${(u.role || 'viewer') === 'viewer' ? 'selected' : ''}>Viewer</option>
+             <option value="editor" ${(u.role || 'viewer') === 'editor' ? 'selected' : ''}>Editor</option>
            </select>`;
-
-      const statusBadge = `<span class="role-badge ${u.role || 'viewer'}">${u.role || 'viewer'}</span>`;
 
       return `
         <tr>
           <td><span class="user-init-sm">${u.initials || '?'}</span></td>
           <td>${u.email}${isFixed ? ' 👑' : ''}</td>
-          <td>${roleOptions}</td>
+          <td>${roleSelect}</td>
           <td><span class="u-last">${u.loginAt ? new Date(u.loginAt).toLocaleDateString('es-AR') : '—'}</span></td>
         </tr>`;
     }).join('');
 
-    const noUsers = !users.length
-      ? '<tr><td colspan="4" class="empty-cell">Ningún usuario ha iniciado sesión todavía.</td></tr>'
-      : rows;
+    const tbody = container.querySelector('tbody') || container.querySelector('.admin-table tbody');
+    if (tbody) {
+      tbody.innerHTML = users.length
+        ? rows
+        : '<tr><td colspan="4" class="empty-cell">Ningún usuario ha iniciado sesión todavía.</td></tr>';
+    }
 
-    container.querySelector('.admin-table tbody').innerHTML = noUsers;
-
-    // View-as-user toggle
     const viewAsBtn = document.getElementById('view-as-user-btn');
-    const viewAs = Storage.getAdminViewAs();
     if (viewAsBtn) {
-      viewAsBtn.textContent = viewAs ? '👁️ Volver a vista Admin' : '👁️ Ver como usuario';
-      viewAsBtn.classList.toggle('active-view', viewAs);
+      viewAsBtn.textContent = viewAs ? '↩ Volver a vista Admin' : '👁️ Ver como usuario';
+      viewAsBtn.classList.toggle('active-view', !!viewAs);
     }
   }
 
-  // ── Reports tab ──────────────────────────────────
+  // ── Reports tab ──────────────────────────────────────────────────────────────
   function renderReportsTab() {
     const container = document.getElementById('tab-reports');
     if (!container) return;
+    const list = container.querySelector('.reports-list');
+    if (!list) return;
 
-    const types = [
-      { key: 'meta',   label: 'Meta Ads',   accept: '.csv', parser: 'MetaParser' },
-      { key: 'google', label: 'Google Ads',  accept: '.csv', parser: 'GoogleAdsParser' },
-      { key: 'kommo',  label: 'Kommo CRM',   accept: '.csv', parser: 'KommoParser' }
+    // ── Meta Ads: multiple CSV ──
+    const metaReports = Storage.getReports('meta');
+    const metaFilesHTML = metaReports.length
+      ? metaReports.map(r => `
+          <div class="report-file-item">
+            <span class="report-status ok">✅ ${r.filename} · ${r.rowCount} filas · ${new Date(r.loadedAt).toLocaleDateString('es-AR')}</span>
+            <button class="btn-sm danger" onclick="Admin.deleteMetaReport('${r.id}')">✕ Eliminar</button>
+          </div>`).join('')
+      : '<span class="report-status empty">Sin datos</span>';
+
+    const metaSection = `
+      <div class="report-row">
+        <div class="report-info">
+          <span class="report-name">Meta Ads</span>
+          <div class="report-status-wrap">${metaFilesHTML}</div>
+          ${metaReports.length > 1 ? `<div class="report-note">📊 ${metaReports.length} archivos se consolidan automáticamente en el dashboard.</div>` : ''}
+        </div>
+        <div class="report-actions">
+          <input type="file" id="file-meta" accept=".csv" style="display:none" onchange="Admin.handleUploadMeta(this)"/>
+          <button class="btn-sm" onclick="document.getElementById('file-meta').click()">
+            📂 ${metaReports.length > 0 ? 'Agregar otro CSV' : 'Subir CSV'}
+          </button>
+        </div>
+      </div>`;
+
+    // ── Google Ads & Kommo: single file ──
+    const singleTypes = [
+      { key: 'google', label: 'Google Ads', parser: 'GoogleAdsParser' },
+      { key: 'kommo',  label: 'Kommo CRM',  parser: 'KommoParser'     },
     ];
 
-    const reportItems = types.map(t => {
+    const singleSections = singleTypes.map(t => {
       const report = Storage.getReport(t.key);
       const statusHTML = report
         ? `<span class="report-status ok">✅ ${report.filename} · ${report.rowCount} filas · ${new Date(report.loadedAt).toLocaleDateString('es-AR')}</span>
@@ -68,7 +93,7 @@ const Admin = (() => {
             <div class="report-status-wrap">${statusHTML}</div>
           </div>
           <div class="report-actions">
-            <input type="file" id="file-${t.key}" accept="${t.accept}" style="display:none"
+            <input type="file" id="file-${t.key}" accept=".csv" style="display:none"
                    onchange="Admin.handleUpload('${t.key}', '${t.parser}', this)"/>
             <button class="btn-sm" onclick="document.getElementById('file-${t.key}').click()">
               📂 Subir CSV
@@ -77,15 +102,15 @@ const Admin = (() => {
         </div>`;
     }).join('');
 
-    container.querySelector('.reports-list').innerHTML = reportItems;
+    list.innerHTML = metaSection + singleSections;
   }
 
-  // ── Wall tab ─────────────────────────────────────
+  // ── Wall tab ─────────────────────────────────────────────────────────────────
   function renderWallTab() {
     const container = document.getElementById('tab-wall');
     if (!container) return;
     const posts = Storage.getWallPosts();
-    const list = container.querySelector('.admin-wall-list');
+    const list  = container.querySelector('.admin-wall-list');
     if (!list) return;
 
     if (!posts.length) {
@@ -103,7 +128,7 @@ const Admin = (() => {
             <span class="ap-date">${new Date(p.timestamp).toLocaleDateString('es-AR')}</span>
             ${p.pinned ? '<span class="pin-badge-sm">📌</span>' : ''}
           </div>
-          <div class="ap-text">${(p.text || '').slice(0, 100)}${p.text?.length > 100 ? '…' : ''}</div>
+          <div class="ap-text">${(p.text || '').slice(0, 100)}${(p.text?.length || 0) > 100 ? '…' : ''}</div>
           <div class="ap-actions">
             <span class="ap-stats">💬 ${(p.comments||[]).length} · ${reactions} reacciones</span>
             <button class="btn-sm" onclick="Admin.editPost('${p.id}')">✏️ Editar</button>
@@ -114,12 +139,12 @@ const Admin = (() => {
     }).join('');
   }
 
-  // ── Social tab ───────────────────────────────────
+  // ── Social tab ───────────────────────────────────────────────────────────────
   function renderSocialTab() {
     const container = document.getElementById('tab-social');
     if (!container) return;
     const socials = Storage.getSocialPreviews() || JSON.parse(JSON.stringify(SOCIAL_DEFAULTS));
-    const list = container.querySelector('.social-admin-list');
+    const list    = container.querySelector('.social-admin-list');
     if (!list) return;
 
     list.innerHTML = socials.map(s => `
@@ -143,7 +168,7 @@ const Admin = (() => {
       </div>`).join('');
   }
 
-  // ── Config tab ───────────────────────────────────
+  // ── Config tab ───────────────────────────────────────────────────────────────
   function renderConfigTab() {
     const container = document.getElementById('tab-config');
     if (!container) return;
@@ -173,6 +198,7 @@ const Admin = (() => {
       </div>`;
   }
 
+  // ── Public API ───────────────────────────────────────────────────────────────
   return {
     init(user) {
       _user = user;
@@ -200,7 +226,7 @@ const Admin = (() => {
       }
     },
 
-    // ── Users actions ───────────────────────────────
+    // ── Users ──────────────────────────────────────────────────────────────────
     changeRole(email, newRole) {
       if (Auth.isAdmin(email)) return;
       Storage.upsertUser({ email, role: newRole });
@@ -209,14 +235,36 @@ const Admin = (() => {
     toggleViewAsUser() {
       const current = Storage.getAdminViewAs();
       Storage.setAdminViewAs(!current);
-      if (!current) {
-        window.location.href = 'index.html';
-      } else {
-        renderUsersTab();
-      }
+      // sessionStorage persists across same-tab navigation, so index.html will read the flag
+      window.location.href = 'index.html';
     },
 
-    // ── Reports actions ──────────────────────────────
+    // ── Reports: Meta (multi-file) ─────────────────────────────────────────────
+    handleUploadMeta(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const report = MetaParser.parse(e.target.result, file.name);
+          Storage.addReport('meta', report);
+          Storage.addActivity({ text: 'Reporte Meta Ads: ' + file.name, time: 'Ahora', dot: 'y' });
+          renderReportsTab();
+        } catch (err) {
+          alert('Error al procesar Meta Ads CSV: ' + err.message);
+        }
+      };
+      reader.readAsText(file, 'UTF-8');
+      input.value = '';
+    },
+
+    deleteMetaReport(id) {
+      if (!confirm('¿Eliminar este archivo de Meta Ads?')) return;
+      Storage.deleteReportById('meta', id);
+      renderReportsTab();
+    },
+
+    // ── Reports: single file (Google, Kommo) ───────────────────────────────────
     handleUpload(type, parserName, input) {
       const file = input.files[0];
       if (!file) return;
@@ -224,13 +272,10 @@ const Admin = (() => {
       reader.onload = e => {
         try {
           const parser = window[parserName];
-          if (!parser) throw new Error('Parser no disponible');
+          if (!parser) throw new Error('Parser no disponible: ' + parserName);
           const report = parser.parse(e.target.result, file.name);
           Storage.saveReport(type, report);
-          Storage.addActivity({
-            text: 'Reporte ' + type + ' cargado: ' + file.name,
-            time: 'Ahora', dot: 'y'
-          });
+          Storage.addActivity({ text: 'Reporte ' + type + ': ' + file.name, time: 'Ahora', dot: 'y' });
           renderReportsTab();
         } catch (err) {
           alert('Error al procesar el archivo: ' + err.message);
@@ -246,14 +291,14 @@ const Admin = (() => {
       renderReportsTab();
     },
 
-    // ── Wall actions ─────────────────────────────────
+    // ── Wall ───────────────────────────────────────────────────────────────────
     editPost(postId) {
       const posts = Storage.getWallPosts();
-      const post = posts.find(p => p.id === postId);
+      const post  = posts.find(p => p.id === postId);
       if (!post) return;
       const newText = prompt('Editar publicación:', post.text);
       if (newText === null) return;
-      post.text = newText.trim() || post.text;
+      post.text     = newText.trim() || post.text;
       post.editedAt = new Date().toISOString();
       Storage.saveWallPosts(posts);
       renderWallTab();
@@ -261,7 +306,7 @@ const Admin = (() => {
 
     pinPost(postId) {
       const posts = Storage.getWallPosts();
-      const post = posts.find(p => p.id === postId);
+      const post  = posts.find(p => p.id === postId);
       if (!post) return;
       post.pinned = !post.pinned;
       Storage.saveWallPosts(posts);
@@ -270,12 +315,11 @@ const Admin = (() => {
 
     deletePostAdmin(postId) {
       if (!confirm('¿Eliminar esta publicación?')) return;
-      const posts = Storage.getWallPosts().filter(p => p.id !== postId);
-      Storage.saveWallPosts(posts);
+      Storage.saveWallPosts(Storage.getWallPosts().filter(p => p.id !== postId));
       renderWallTab();
     },
 
-    // ── Social actions ───────────────────────────────
+    // ── Social ─────────────────────────────────────────────────────────────────
     saveSocial(id) {
       const socials = Storage.getSocialPreviews() || JSON.parse(JSON.stringify(SOCIAL_DEFAULTS));
       const s = socials.find(x => x.id === id);
@@ -284,7 +328,6 @@ const Admin = (() => {
       s.link = document.getElementById('sad-link-' + id)?.value?.trim() || s.link;
       s.date = document.getElementById('sad-date-' + id)?.value?.trim() || s.date;
       Storage.saveSocialPreviews(socials);
-
       const btn = document.querySelector(`[onclick="Admin.saveSocial('${id}')"]`);
       if (btn) { btn.textContent = '✅ Guardado'; setTimeout(() => btn.textContent = 'Guardar', 1500); }
     }

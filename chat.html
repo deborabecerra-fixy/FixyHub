@@ -64,35 +64,31 @@
 </div>
 
 <!-- SCRIPTS -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="js/config.js"></script>
+<script src="js/firebaseConfig.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/permissions.js"></script>
 <script src="data/mockData.js"></script>
 <script src="js/analytics.js"></script>
+<script src="data/fluxKnowledge.js"></script>
 <script src="js/chat.js"></script>
 <script>
   const Flux = {
-    chip(text) {
-      const inp = document.getElementById('chat-input');
-      if (inp) { inp.value = text; }
-      Chat.initFullPage._send && Chat.initFullPage._send();
-      // Manually trigger send
-      const inp2 = document.getElementById('chat-input');
-      if (!inp2) return;
-      inp2.value = text;
-      inp2.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    }
+    chip(text) { Chat.sendChip(text); }
   };
 
   document.addEventListener('DOMContentLoaded', () => {
-    const user = Auth.getCurrentUser();
-    if (!user) {
-      document.getElementById('chat-page').style.display = 'none';
-      document.getElementById('chat-no-auth').style.display = 'flex';
-      return;
-    }
-    Chat.initFullPage(user);
+    Auth.listenAuthState(({ authenticated, user }) => {
+      if (!authenticated) {
+        document.getElementById('chat-page').style.display = 'none';
+        document.getElementById('chat-no-auth').style.display = 'flex';
+        return;
+      }
+      Chat.initFullPage(user);
+    });
   });
 </script>
 </body>

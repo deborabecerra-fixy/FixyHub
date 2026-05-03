@@ -75,6 +75,12 @@
 .cfg-tag.bad  { background:#fee2e2; color:#b91c1c }
 .cfg-tag.good { background:#dcfce7; color:#15803d }
 
+/* ── Multi-file Meta upload ─────────────────────── */
+.report-file-item { display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid var(--paper-dk) }
+.report-file-item:last-child { border-bottom:none }
+.report-status-wrap { display:flex; flex-direction:column; gap:4px; flex:1 }
+.report-note { font-size:11px; color:var(--sky); font-weight:600; margin-top:4px }
+
 /* ── Admin header back btn ──────────────────────── */
 .btn-back { display:flex; align-items:center; gap:6px; padding:7px 16px; background:var(--paper); color:var(--ink-soft); font-size:12px; font-weight:600; border-radius:8px; border:1.5px solid #e2e7ea; transition:all .15s; cursor:pointer }
 .btn-back:hover { border-color:var(--sky); color:var(--sky) }
