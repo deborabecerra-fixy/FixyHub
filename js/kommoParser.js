@@ -206,3 +206,9 @@ const KommoParser = (() => {
     }
   };
 })();
+
+// Exponer globalmente para compatibilidad con admin.js
+window.KommoParser = KommoParser;
+
+// Alias para consistencia
+window.KommoParser.parseKommoCSV = window.KommoParser.parse;
