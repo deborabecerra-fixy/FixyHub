@@ -1,6 +1,21 @@
 const KommoParser = (() => {
+  const DEBUG_KOMMO = false;
+
   function norm(val) {
     return (val || '').toLowerCase().trim();
+  }
+
+  function normalizeText(val) {
+    return (val || '')
+      .toLowerCase()
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ');
+  }
+
+  function normalizePhone(val) {
+    return (val || '').replace(/[\D]/g, '');
   }
 
   function detectSep(line) {
@@ -29,46 +44,80 @@ const KommoParser = (() => {
   }
 
   function isJobSearch(row, headers) {
-    const allText = headers.map(h => norm(row[h])).join(' ');
-    return FIXY_CONFIG.excludedKeywords
-      .filter(kw => kw.includes('trabajo') || kw.includes('empleo') || kw.includes('cv') ||
-                    kw.includes('repartidor') || kw.includes('chofer') || kw.includes('moto') ||
-                    kw.includes('postular') || kw.includes('busco'))
-      .some(kw => allText.includes(kw));
+    const jobKeywords = ['trabajo', 'empleo', 'cv', 'curriculum', 'repartidor', 'mensajero', 'chofer', 'moto', 'quiero trabajar', 'busco trabajo', 'postularme'];
+    const allText = headers.map(h => normalizeText(row[h])).join(' ');
+    return jobKeywords.some(kw => allText.includes(kw));
   }
 
   function isPersonalShipping(row, headers) {
-    const allText = headers.map(h => norm(row[h])).join(' ');
-    return FIXY_CONFIG.excludedKeywords
-      .filter(kw => kw.includes('particular') || kw.includes('paquete') || kw.includes('mandar') ||
-                    kw.includes('enviar') || kw.includes('precio'))
-      .some(kw => allText.includes(kw));
+    const shipKeywords = ['envio particular', 'envío particular', 'paquete personal', 'mandar paquete', 'enviar paquete', 'precio envio', 'precio envío', 'encomienda particular', 'correo argentino'];
+    const allText = headers.map(h => normalizeText(row[h])).join(' ');
+    return shipKeywords.some(kw => allText.includes(kw));
   }
 
-  function hasValidSource(row, colMap) {
-    const src = norm(row[colMap.source] || '') + ' ' +
-                norm(row[colMap.utm_source] || '') + ' ' +
-                norm(row[colMap.utm_medium] || '') + ' ' +
-                norm(row[colMap.referrer] || '');
-    const hasUTM = row[colMap.utm_source] || row[colMap.utm_medium] || row[colMap.utm_campaign];
-    const hasFb  = row[colMap.fbclid];
-    const hasGcl = row[colMap.gclid];
-    const hasRef = row[colMap.referrer];
-    const sourceMatch = FIXY_CONFIG.allowedLeadSources.some(s => src.includes(s));
-    const phoneMatch = FIXY_CONFIG.allowedPhones
+  function isMarketingAttribued(row, colMap) {
+    const hasUtmSource = !!(row[colMap.utm_source] && norm(row[colMap.utm_source]).length > 0);
+    const hasUtmMedium = !!(row[colMap.utm_medium] && norm(row[colMap.utm_medium]).length > 0);
+    const hasUtmCampaign = !!(row[colMap.utm_campaign] && norm(row[colMap.utm_campaign]).length > 0);
+    const hasUtmContent = !!(row[colMap.utm_content] && norm(row[colMap.utm_content]).length > 0);
+    const hasUtmTerm = !!(row[colMap.utm_term] && norm(row[colMap.utm_term]).length > 0);
+    const hasFbclid = !!(row[colMap.fbclid] && norm(row[colMap.fbclid]).length > 0);
+    const hasGclid = !!(row[colMap.gclid] && norm(row[colMap.gclid]).length > 0);
+    const hasGaUtm = !!(row[colMap.ga_utm] && norm(row[colMap.ga_utm]).length > 0);
+
+    const utm = hasUtmSource || hasUtmMedium || hasUtmCampaign || hasUtmContent || hasUtmTerm;
+    const clicks = hasFbclid || hasGclid;
+    const analytics = hasGaUtm;
+
+    if (utm || clicks || analytics) return true;
+
+    // Check referrer
+    if (row[colMap.referrer]) {
+      const ref = normalizeText(row[colMap.referrer]);
+      const marketingSources = ['google', 'facebook', 'instagram', 'meta', 'ads', 'fixy', 'tiktok', 'linkedin'];
+      if (marketingSources.some(s => ref.includes(s))) return true;
+    }
+
+    // Check if any field contains marketing indicators
+    const allText = [
+      normalizeText(row[colMap.solution] || ''),
+      normalizeText(row[colMap.tags] || ''),
+      normalizeText(row[colMap.notes] || ''),
+      normalizeText(row[colMap.name] || '')
+    ].join(' ');
+    const marketingIndicators = ['facebook', 'instagram', 'google', 'meta', 'ads', 'campaña', 'campana', 'publicidad', 'marketing'];
+    if (marketingIndicators.some(ind => allText.includes(ind))) return true;
+
+    // Check allowed phones
+    const allowedPhones = FIXY_CONFIG.allowedPhones
       .filter(p => !p.startsWith('COMPLETAR'))
-      .some(p => {
-        const phone = norm(row[colMap.phone] || '') + norm(row[colMap.phone2] || '');
-        return phone.includes(p);
-      });
-    return !!(hasUTM || hasFb || hasGcl || (hasRef && sourceMatch) || phoneMatch);
+      .map(p => normalizePhone(p));
+    const phonesCombined = [
+      normalizePhone(row[colMap.phone] || ''),
+      normalizePhone(row[colMap.phone2] || ''),
+      normalizePhone(row[colMap.phone3] || ''),
+      normalizePhone(row[colMap.phone4] || '')
+    ].join('');
+    if (phonesCombined && allowedPhones.some(p => p && phonesCombined.includes(p))) return true;
+
+    return false;
   }
 
   function classifyStatus(status) {
-    const s = norm(status);
-    if (FIXY_CONFIG.wonStatuses.some(w => s.includes(norm(w)))) return 'won';
-    if (FIXY_CONFIG.lostStatuses.some(l => s.includes(norm(l)))) return 'lost';
-    if (FIXY_CONFIG.activeStatuses.some(a => s.includes(norm(a)))) return 'active';
+    const s = normalizeText(status);
+
+    // Lost statuses
+    const lostKeywords = ['perdido', 'lost', 'cerrado perdido', 'descartado', 'no califica', 'no responde', 'sin respuesta', 'no avanza'];
+    if (lostKeywords.some(k => s.includes(k))) return 'lost';
+
+    // Won statuses
+    const wonKeywords = ['logrado', 'ganado', 'won', 'exito', 'éxito'];
+    if (wonKeywords.some(k => s.includes(k))) return 'won';
+
+    // Active statuses
+    const activeKeywords = ['incoming', 'nuevo', 'contactado', 'seguimiento', 'esperando', 'feedback', 'negociacion', 'negociación', 'implementacion', 'implementación', 'en gestion', 'en gestión'];
+    if (activeKeywords.some(k => s.includes(k))) return 'active';
+
     return 'other';
   }
 
@@ -93,14 +142,16 @@ const KommoParser = (() => {
         name:          findCol(headers, ['nombre del lead', 'nombre']),
         status:        findCol(headers, ['estatus del lead', 'status', 'estatus']),
         pipeline:      findCol(headers, ['embudo', 'pipeline']),
-        created:       findCol(headers, ['fecha de creación', 'created']),
+        created:       findCol(headers, ['fecha de creacion', 'fecha de creación', 'created']),
         closed:        findCol(headers, ['cerrado', 'closed']),
         tags:          findCol(headers, ['etiquetas', 'tags']),
-        notes:         findCol(headers, ['nota', 'note']),
-        solution:      findCol(headers, ['qué solución', 'solución', 'solution']),
-        shipments:     findCol(headers, ['cuántos envíos', 'cant de envios', 'envíos']),
-        phone:         findCol(headers, ['phone', 'teléfono', 'telefono', 'celular']),
-        phone2:        findCol(headers, ['teléfono oficina']),
+        notes:         findCol(headers, ['nota', 'note', 'nota 1', 'nota 2', 'nota 3', 'nota 4', 'nota 5']),
+        solution:      findCol(headers, ['que solucion', 'qué solución', 'solucion', 'solución', 'solution']),
+        shipments:     findCol(headers, ['cuantos envios', 'cuántos envíos', 'cant de envios', 'envios', 'envíos']),
+        phone:         findCol(headers, ['phone', 'telefono', 'teléfono', 'celular', 'telefono celular']),
+        phone2:        findCol(headers, ['telefono oficina', 'teléfono oficina', 'telefono oficina directo', 'teléfono oficina directo']),
+        phone3:        findCol(headers, ['otro telefono', 'otro teléfono']),
+        phone4:        findCol(headers, ['PHONE']),
         email:         findCol(headers, ['correo', 'email']),
         referrer:      findCol(headers, ['referrer', 'utm_referrer']),
         utm_source:    findCol(headers, ['utm_source']),
@@ -116,60 +167,103 @@ const KommoParser = (() => {
 
       const counts = {
         total: rows.length,
-        validMarketing: 0,
-        excluded: 0,
+        marketingAttributed: 0,
+        excludedNotMarketing: 0,
         manageable: 0,
         nonManageable: 0,
-        won: 0, lost: 0, active: 0,
-        incomplete: 0, jobSearch: 0, personalShipping: 0, outOfSource: 0,
-        byService: {}, byShipments: {}, bySource: {}, lossReasons: {}
+        won: 0,
+        lost: 0,
+        active: 0,
+        incomplete: 0,
+        jobSearch: 0,
+        personalShipping: 0,
+        outOfService: 0,
+        byService: {},
+        byShipments: {},
+        bySource: {},
+        byStatus: { won: 0, lost: 0, active: 0, other: 0 },
+        lossReasons: {}
       };
 
       const classified = rows.map(row => {
         const status = colMap.status ? (row[colMap.status] || '') : '';
         const statusType = classifyStatus(status);
-        const hasSource = hasValidSource(row, colMap);
-        const jobSearch = isJobSearch(row, headers);
-        const personalShip = isPersonalShipping(row, headers);
-        const hasName = !!(colMap.name && row[colMap.name]);
+        const isMarketing = isMarketingAttribued(row, colMap);
+        const jobSearch = isJobSearch(row, colMap);
+        const personalShip = isPersonalShipping(row, colMap);
+        const hasName = !!(colMap.name && row[colMap.name] && norm(row[colMap.name]));
         const hasContact = !!(
-          (colMap.phone && row[colMap.phone]) ||
-          (colMap.email && row[colMap.email])
+          (colMap.phone && row[colMap.phone] && norm(row[colMap.phone])) ||
+          (colMap.phone2 && row[colMap.phone2] && norm(row[colMap.phone2])) ||
+          (colMap.phone3 && row[colMap.phone3] && norm(row[colMap.phone3])) ||
+          (colMap.phone4 && row[colMap.phone4] && norm(row[colMap.phone4])) ||
+          (colMap.email && row[colMap.email] && norm(row[colMap.email]))
         );
-        const isIncomplete = !hasName && !hasContact;
+        const isIncomplete = !hasContact;
 
-        let category;
-        if (jobSearch) { category = 'job_search'; counts.jobSearch++; counts.nonManageable++; counts.excluded++; }
-        else if (personalShip) { category = 'personal_shipping'; counts.personalShipping++; counts.nonManageable++; counts.excluded++; }
-        else if (isIncomplete) { category = 'incomplete'; counts.incomplete++; counts.nonManageable++; counts.excluded++; }
-        else if (!hasSource) { category = 'out_of_source'; counts.outOfSource++; counts.nonManageable++; counts.excluded++; }
-        else {
-          category = 'manageable';
-          counts.manageable++;
-          counts.validMarketing++;
+        let category = 'other';
 
-          if (statusType === 'won')  counts.won++;
-          if (statusType === 'lost') counts.lost++;
-          if (statusType === 'active') counts.active++;
+        // Primero: ¿es atribuible a Marketing?
+        if (!isMarketing) {
+          category = 'excluded_not_marketing';
+          counts.excludedNotMarketing++;
+        } else {
+          // Es atribuible a Marketing
+          counts.marketingAttributed++;
 
-          // By service
-          const svc = colMap.solution ? (row[colMap.solution] || 'No especificado') : 'No especificado';
-          counts.byService[svc] = (counts.byService[svc] || 0) + 1;
+          // Clasificar dentro de Marketing
+          if (jobSearch) {
+            category = 'job_search';
+            counts.jobSearch++;
+            counts.nonManageable++;
+          } else if (personalShip) {
+            category = 'personal_shipping';
+            counts.personalShipping++;
+            counts.nonManageable++;
+          } else if (isIncomplete) {
+            category = 'incomplete';
+            counts.incomplete++;
+            counts.nonManageable++;
+          } else {
+            // Es gestionable
+            category = 'manageable';
+            counts.manageable++;
 
-          // By shipments
-          const shp = colMap.shipments ? (row[colMap.shipments] || 'No especificado') : 'No especificado';
-          counts.byShipments[shp] = (counts.byShipments[shp] || 0) + 1;
+            // Track por status
+            if (statusType === 'won') counts.won++;
+            if (statusType === 'lost') {
+              counts.lost++;
+              const lossReason = normalizeText(status);
+              counts.lossReasons[lossReason] = (counts.lossReasons[lossReason] || 0) + 1;
+            }
+            if (statusType === 'active') counts.active++;
 
-          // By source
-          const src = colMap.utm_source ? (row[colMap.utm_source] || 'directo') : 'directo';
-          counts.bySource[src] = (counts.bySource[src] || 0) + 1;
+            // By service
+            const svc = colMap.solution ? (row[colMap.solution] || 'No especificado') : 'No especificado';
+            counts.byService[svc] = (counts.byService[svc] || 0) + 1;
+
+            // By shipments
+            const shp = colMap.shipments ? (row[colMap.shipments] || 'No especificado') : 'No especificado';
+            counts.byShipments[shp] = (counts.byShipments[shp] || 0) + 1;
+
+            // By source
+            const src = colMap.utm_source ? (row[colMap.utm_source] || 'directo') : 'directo';
+            counts.bySource[src] = (counts.bySource[src] || 0) + 1;
+          }
+        }
+
+        // Track status overall
+        counts.byStatus[statusType]++;
+
+        if (DEBUG_KOMMO) {
+          console.log(`[KOMMO DEBUG] Status: "${status}" → ${statusType} | Category: ${category} | Marketing: ${isMarketing}`);
         }
 
         return { ...row, _category: category, _status: statusType };
       });
 
-      const manageableRate = counts.total > 0
-        ? Math.round((counts.manageable / counts.total) * 100)
+      const leadQualityRate = counts.marketingAttributed > 0
+        ? Math.round((counts.manageable / counts.marketingAttributed) * 100)
         : 0;
 
       const conversionRate = counts.manageable > 0
@@ -185,8 +279,8 @@ const KommoParser = (() => {
         rows: classified,
         summary: {
           totalImported: counts.total,
-          validMarketingLeads: counts.validMarketing,
-          excludedLeads: counts.excluded,
+          marketingAttributedLeads: counts.marketingAttributed,
+          excludedNotMarketing: counts.excludedNotMarketing,
           manageableLeads: counts.manageable,
           nonManageableLeads: counts.nonManageable,
           wonLeads: counts.won,
@@ -195,12 +289,14 @@ const KommoParser = (() => {
           incompleteDataLeads: counts.incomplete,
           jobSearchLeads: counts.jobSearch,
           personalShippingLeads: counts.personalShipping,
-          outOfSourceLeads: counts.outOfSource,
-          manageableRate,
+          outOfServiceLeads: counts.outOfService,
+          leadQualityRate,
           conversionRateOverManageable: conversionRate,
           byService: counts.byService,
           byMonthlyShipments: counts.byShipments,
-          bySource: counts.bySource
+          bySource: counts.bySource,
+          byStatus: counts.byStatus,
+          lossReasons: counts.lossReasons
         }
       };
     }

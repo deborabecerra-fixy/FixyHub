@@ -157,26 +157,30 @@ const Dashboard = (() => {
     const s = report.summary;
     if (badge) badge.textContent = '✅ ' + s.totalImported + ' leads';
 
-    const excludedParts = [];
-    if (s.jobSearchLeads       > 0) excludedParts.push(`${s.jobSearchLeads} búsqueda laboral`);
-    if (s.personalShippingLeads > 0) excludedParts.push(`${s.personalShippingLeads} envío personal`);
-    if (s.outOfSourceLeads     > 0) excludedParts.push(`${s.outOfSourceLeads} fuera de fuente`);
-    if (s.incompleteDataLeads  > 0) excludedParts.push(`${s.incompleteDataLeads} dato incompleto`);
+    // Descartados dentro de Marketing
+    const discardedParts = [];
+    if (s.jobSearchLeads > 0) discardedParts.push(`${s.jobSearchLeads} búsqueda laboral`);
+    if (s.personalShippingLeads > 0) discardedParts.push(`${s.personalShippingLeads} envío particular`);
+    if (s.incompleteDataLeads > 0) discardedParts.push(`${s.incompleteDataLeads} dato incompleto`);
+    if (s.outOfServiceLeads > 0) discardedParts.push(`${s.outOfServiceLeads} fuera de servicio`);
 
-    const rateColor = s.manageableRate >= 60 ? 'var(--green)' : s.manageableRate >= 40 ? 'var(--yellow)' : 'var(--error)';
+    const qualityColor = s.leadQualityRate >= 60 ? 'var(--green)' : s.leadQualityRate >= 40 ? 'var(--yellow)' : 'var(--error)';
 
     body.innerHTML = `
       <div class="panel-inner">
         <div class="meta-summary">
           <div class="ms-card"><div class="ms-val">${s.totalImported}</div><div class="ms-lbl">Importados</div></div>
-          <div class="ms-card"><div class="ms-val" style="color:${rateColor}">${s.manageableLeads}</div><div class="ms-lbl">Gestionables</div></div>
-          <div class="ms-card"><div class="ms-val">${s.wonLeads}</div><div class="ms-lbl">Ganados</div></div>
-          <div class="ms-card"><div class="ms-val">${s.lostLeads}</div><div class="ms-lbl">Perdidos</div></div>
-          <div class="ms-card"><div class="ms-val">${s.activeLeads}</div><div class="ms-lbl">En gestión</div></div>
-          <div class="ms-card"><div class="ms-val">${s.conversionRateOverManageable}%</div><div class="ms-lbl">Conversión</div></div>
+          <div class="ms-card"><div class="ms-val">${s.marketingAttributedLeads}</div><div class="ms-lbl">Atribuibles</div></div>
+          <div class="ms-card"><div class="ms-val" style="color:${qualityColor}">${s.manageableLeads}</div><div class="ms-lbl">Gestionables</div></div>
+          <div class="ms-card"><div class="ms-val">${s.nonManageableLeads}</div><div class="ms-lbl">No gestionables</div></div>
+          <div class="ms-card"><div class="ms-val">${s.wonLeads}</div><div class="ms-lbl">Ganados*</div></div>
+          <div class="ms-card"><div class="ms-val">${s.lostLeads}</div><div class="ms-lbl">Perdidos*</div></div>
+          <div class="ms-card"><div class="ms-val">${s.activeLeads}</div><div class="ms-lbl">En gestión*</div></div>
+          <div class="ms-card"><div class="ms-val" style="color:${qualityColor}">${s.leadQualityRate}%</div><div class="ms-lbl">Calidad del lead</div></div>
         </div>
-        ${excludedParts.length ? `<div class="dash-alert">📋 Descartados: ${excludedParts.join(' · ')}</div>` : ''}
-        <p class="meta-note">Tasa gestionable: <strong>${s.manageableRate}%</strong> · ${report.filename} · ${new Date(report.loadedAt).toLocaleDateString('es-AR')}</p>
+        ${discardedParts.length ? `<div class="dash-alert">📋 Descartados dentro de Marketing: ${discardedParts.join(' · ')}</div>` : ''}
+        ${s.excludedNotMarketing > 0 ? `<div class="dash-alert">🚫 Fuera del análisis de Marketing: ${s.excludedNotMarketing}</div>` : ''}
+        <p class="meta-note">* Contexto en Kommo CRM · ${report.filename} · ${new Date(report.loadedAt).toLocaleDateString('es-AR')}</p>
       </div>`;
   }
 
